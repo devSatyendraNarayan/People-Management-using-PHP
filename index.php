@@ -91,6 +91,8 @@ $result = $conn->query($sql);
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" id="searchInput" class="form-control" placeholder="Search by name">
+                            <button class="btn btn-secondary " id="clearSearch" type="button">
+                                <i class="fas fa-times"></i> </button>
                         </div>
                     </div>
                     <div class="col-md-6 text-md-end">
@@ -103,7 +105,7 @@ $result = $conn->query($sql);
                     <table class="table table-hover table-bordered">
                         <thead class="table-light">
                             <tr>
-                            <th>S.No</th>
+                                <th>S.No</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Contact</th>
@@ -248,6 +250,17 @@ $result = $conn->query($sql);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
         $(document).ready(function () {
             const apiKey = "THRWd1oxT1pKcmRKVEtXR2Y1WGdxakFiNzhSSHZOUW81VUJXWGlXMQ==";
 
@@ -346,21 +359,59 @@ $result = $conn->query($sql);
                 });
             });
 
-            $('#searchInput').on('keyup', function () {
-                var searchTerm = $(this).val();
-                $.ajax({
-                    url: 'views/search.php',
-                    type: 'GET',
-                    data: { search: searchTerm },
-                    success: function (response) {
-                        $('#peopleTable').html(response);
-                    },
-                    error: function () {
-                        console.error('Failed to fetch search results.');
-                    }
-                });
-            });
+            const searchInput = $('#searchInput');
+    const clearButton = $('#clearSearch');
 
+    // Function to toggle clear button visibility
+    function toggleClearButton() {
+        if (searchInput.val().length > 0) {
+            clearButton.show();
+        } else {
+            clearButton.hide();
+        }
+    }
+
+    // Initially hide the clear button
+    clearButton.hide();
+
+    // Debounced search function
+    const debouncedSearch = debounce(function() {
+        var searchTerm = searchInput.val();
+        $.ajax({
+            url: 'views/search.php',
+            type: 'GET',
+            data: { search: searchTerm },
+            success: function (response) {
+                $('#peopleTable').html(response);
+            },
+            error: function () {
+                console.error('Failed to fetch search results.');
+            }
+        });
+    }, 300); // 300ms delay
+
+    // Search input event handler
+    searchInput.on('input', function () {
+        toggleClearButton();
+        debouncedSearch();
+    });
+
+    // Clear search input and results
+    clearButton.on('click', function () {
+        searchInput.val('');
+        toggleClearButton();
+        $.ajax({
+            url: 'views/search.php',
+            type: 'GET',
+            data: { search: '' },
+            success: function (response) {
+                $('#peopleTable').html(response);
+            },
+            error: function () {
+                console.error('Failed to fetch search results.');
+            }
+        });
+    });
             $(document).on('click', '.edit-btn', function () {
                 const id = $(this).data('id');
                 $.ajax({
